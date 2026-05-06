@@ -10,34 +10,28 @@ struct HotkeySettingsView: View {
 
             shortcutSection(
                 label: "Main Window",
-                keyCode: Binding(
-                    get: { appState.hotkeyKeyCode },
-                    set: { appState.onHotkeyChanged(type: .main, keyCode: $0, modifiers: appState.hotkeyModifiers) }
-                ),
-                modifiers: Binding(
-                    get: { appState.hotkeyModifiers },
-                    set: { appState.onHotkeyChanged(type: .main, keyCode: appState.hotkeyKeyCode, modifiers: $0) }
-                ),
-                description: "Show or hide the main MCFinder window"
-            )
+                description: "Show or hide the main MCFinder window",
+                keyCode: appState.hotkeyKeyCode,
+                modifiers: appState.hotkeyModifiers,
+                error: appState.hotkeyErrors[.main]
+            ) { code, mods in
+                appState.onHotkeyChanged(type: .main, keyCode: code, modifiers: mods)
+            }
 
             shortcutSection(
                 label: "Quick Search",
-                keyCode: Binding(
-                    get: { appState.quickSearchKeyCode },
-                    set: { appState.onHotkeyChanged(type: .quickSearch, keyCode: $0, modifiers: appState.quickSearchModifiers) }
-                ),
-                modifiers: Binding(
-                    get: { appState.quickSearchModifiers },
-                    set: { appState.onHotkeyChanged(type: .quickSearch, keyCode: appState.quickSearchKeyCode, modifiers: $0) }
-                ),
-                description: "Show the quick search panel"
-            )
+                description: "Show the quick search panel",
+                keyCode: appState.quickSearchKeyCode,
+                modifiers: appState.quickSearchModifiers,
+                error: appState.hotkeyErrors[.quickSearch]
+            ) { code, mods in
+                appState.onHotkeyChanged(type: .quickSearch, keyCode: code, modifiers: mods)
+            }
 
-            Text("Shortcuts require at least one modifier key (Cmd, Shift, Option, Control).")
+            Text("Shortcuts require at least one modifier (⌘ ⌥ ⌃ ⇧). Press Esc to cancel recording.")
                 .font(.caption)
                 .foregroundColor(.secondary)
-            Text("If a shortcut conflicts with a system shortcut, try a different combination.")
+            Text("If a shortcut conflicts with macOS or another app, the recorder will show a warning — pick a different combination.")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -46,9 +40,11 @@ struct HotkeySettingsView: View {
 
     private func shortcutSection(
         label: String,
-        keyCode: Binding<Int>,
-        modifiers: Binding<NSEvent.ModifierFlags>,
-        description: String
+        description: String,
+        keyCode: Int,
+        modifiers: NSEvent.ModifierFlags,
+        error: String?,
+        onCommit: @escaping (Int, NSEvent.ModifierFlags) -> Void
     ) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
@@ -57,8 +53,15 @@ struct HotkeySettingsView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
 
-            HotkeyRecorderView(keyCode: keyCode, modifiers: modifiers)
+            HotkeyRecorderView(keyCode: keyCode, modifiers: modifiers, onCommit: onCommit)
                 .frame(width: 200, height: 30)
+
+            if let error {
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 }

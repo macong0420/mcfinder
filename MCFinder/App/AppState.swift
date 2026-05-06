@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import OSLog
 import Combine
+import ServiceManagement
 import SwiftUI
 
 @MainActor
@@ -52,10 +53,25 @@ final class AppState: ObservableObject {
 
     // MARK: - Hotkey State
 
-    @Published var hotkeyKeyCode = 49
-    @Published var hotkeyModifiers: NSEvent.ModifierFlags = [.command, .shift]
-    @Published var quickSearchKeyCode = 49
-    @Published var quickSearchModifiers: NSEvent.ModifierFlags = [.command, .shift, .control]
+    // Defaults: ⌥⌘F (main) and ⇧⌥⌘F (quick search). The previous default
+    // (⌘⇧Space) is bound to "Select previous input source" on a stock macOS
+    // install, so RegisterEventHotKey would silently fail with
+    // eventHotKeyExistsErr — i.e. the user saw a configured shortcut that
+    // didn't actually work. Letter `F` (keyCode 3) with ⌥⌘ has no default
+    // system binding.
+    @Published var hotkeyKeyCode = 3
+    @Published var hotkeyModifiers: NSEvent.ModifierFlags = [.command, .option]
+    @Published var quickSearchKeyCode = 3
+    @Published var quickSearchModifiers: NSEvent.ModifierFlags = [.command, .option, .shift]
+
+    /// Last registration outcome per hotkey, surfaced under each recorder so
+    /// users immediately see when their chosen combo conflicts.
+    @Published var hotkeyErrors: [HotkeyType: String] = [:]
+
+    // MARK: - Login Item
+
+    /// Backs the "Launch at Login" toggle in Settings. Wraps SMAppService.
+    let launchAtLoginManager = LaunchAtLoginManager()
 
     // MARK: - UI State
 
@@ -249,6 +265,12 @@ final class AppState: ObservableObject {
             backing: .buffered,
             defer: false
         )
+        // NSWindow defaults `isReleasedWhenClosed` to `true` — a non-ARC era
+        // legacy that, when combined with a Swift-managed local reference like
+        // ours, leaves SwiftUI/AppKit holding zombie pointers after the
+        // settings window is closed and re-opened. Disabling it lets ARC own
+        // the lifecycle cleanly.
+        window.isReleasedWhenClosed = false
         window.title = "Settings"
         window.contentView = NSHostingView(rootView: SettingsView().environmentObject(self))
         window.center()
@@ -279,17 +301,52 @@ final class AppState: ObservableObject {
     }
 
     func onHotkeyChanged(type: HotkeyType, keyCode: Int, modifiers: NSEvent.ModifierFlags) {
+        // Defense in depth — the recorder already filters bare keys, but this
+        // also catches values arriving from older builds or programmatic edits.
+        let modifierMask: NSEvent.ModifierFlags = [.command, .control, .option, .shift]
+        guard !modifiers.intersection(modifierMask).isEmpty else {
+            hotkeyErrors[type] = "Add a modifier (⌘ ⌥ ⌃ ⇧) to make this a global shortcut."
+            return
+        }
+
         let d = UserDefaults.standard
         switch type {
         case .main:
-            hotkeyKeyCode = keyCode; hotkeyModifiers = modifiers
-            d.set(keyCode, forKey: "hotkeyKeyCode"); d.set(modifiers.rawValue, forKey: "hotkeyModifiers")
-            _ = keyboardShortcutManager?.registerMainHotkey(keyCode: keyCode, modifiers: modifiers)
+            hotkeyKeyCode = keyCode
+            hotkeyModifiers = modifiers
+            d.set(keyCode, forKey: "hotkeyKeyCode")
+            d.set(modifiers.rawValue, forKey: "hotkeyModifiers")
         case .quickSearch:
-            quickSearchKeyCode = keyCode; quickSearchModifiers = modifiers
-            d.set(keyCode, forKey: "quickSearchHotkeyKeyCode"); d.set(modifiers.rawValue, forKey: "quickSearchHotkeyModifiers")
-            _ = keyboardShortcutManager?.registerQuickSearchHotkey(keyCode: keyCode, modifiers: modifiers)
+            quickSearchKeyCode = keyCode
+            quickSearchModifiers = modifiers
+            d.set(keyCode, forKey: "quickSearchHotkeyKeyCode")
+            d.set(modifiers.rawValue, forKey: "quickSearchHotkeyModifiers")
         }
+        applyHotkey(type)
+    }
+
+    /// Re-registers a single hotkey from the current AppState values and
+    /// records the outcome (so the UI can show "shortcut taken" etc.).
+    func applyHotkey(_ type: HotkeyType) {
+        guard let manager = keyboardShortcutManager else { return }
+        let result: HotkeyRegistrationResult
+        switch type {
+        case .main:
+            result = manager.registerMainHotkey(keyCode: hotkeyKeyCode, modifiers: hotkeyModifiers)
+        case .quickSearch:
+            result = manager.registerQuickSearchHotkey(keyCode: quickSearchKeyCode, modifiers: quickSearchModifiers)
+        }
+        if let msg = result.errorMessage {
+            hotkeyErrors[type] = msg
+        } else {
+            hotkeyErrors.removeValue(forKey: type)
+        }
+    }
+
+    /// Convenience for the AppDelegate's startup path.
+    func applyAllHotkeys() {
+        applyHotkey(.main)
+        applyHotkey(.quickSearch)
     }
 
     private func loadHotkeyPreferences() {
@@ -341,3 +398,80 @@ final class AppState: ObservableObject {
 }
 
 enum HotkeyType { case main; case quickSearch }
+
+// MARK: - Launch at Login
+
+/// Thin wrapper around `SMAppService.mainApp` that powers the
+/// "Launch at Login" toggle in Settings. The previous build hard-coded the
+/// toggle to `.constant(false)`, so the option appeared in the UI but was
+/// inert.
+///
+/// Sandboxing notes: `SMAppService.mainApp` works for sandboxed apps and
+/// requires no extra entitlement, but the user must approve the login item in
+/// System Settings → General → Login Items. We surface that requirement
+/// through `lastError` and open the relevant settings pane on the first
+/// successful `register()` that lands in the `.requiresApproval` state.
+@MainActor
+final class LaunchAtLoginManager: ObservableObject {
+    @Published private(set) var isEnabled: Bool = false
+    @Published private(set) var lastError: String?
+
+    init() {
+        refresh()
+    }
+
+    /// Re-reads the current login-item status from the system. Cheap; safe to
+    /// call from `onAppear` / window focus handlers if needed.
+    func refresh() {
+        isEnabled = (SMAppService.mainApp.status == .enabled)
+    }
+
+    /// Toggles the login-item registration. Idempotent — no-ops if the system
+    /// is already in the requested state.
+    ///
+    /// Hops to the next main-thread tick before doing any work. The Toggle's
+    /// `set` closure runs synchronously during a SwiftUI gesture, and calling
+    /// `SMAppService.register()` + `openSystemSettingsLoginItems()` inside
+    /// that same call frame has been observed to crash in `objc_release`
+    /// (use-after-free on an AppKit/SwiftUI internal object) — focus changes
+    /// to System Settings while SwiftUI is still mid-update through our
+    /// `@Published` writes. A single run-loop hop breaks that re-entrancy.
+    func setEnabled(_ enable: Bool) {
+        Task { @MainActor [weak self] in
+            self?.performSetEnabled(enable)
+        }
+    }
+
+    /// Opens "System Settings → General → Login Items" so the user can
+    /// approve our app. Exposed separately (instead of being called
+    /// automatically from `setEnabled`) so the focus change happens on a
+    /// distinct user gesture, not interleaved with binding mutations.
+    func openLoginItemsSettings() {
+        SMAppService.openSystemSettingsLoginItems()
+    }
+
+    private func performSetEnabled(_ enable: Bool) {
+        let service = SMAppService.mainApp
+        var caught: String?
+        do {
+            if enable {
+                try service.register()
+            } else {
+                try service.unregister()
+            }
+        } catch {
+            caught = error.localizedDescription
+        }
+
+        let status = service.status
+        isEnabled = (status == .enabled)
+
+        if let caught {
+            lastError = caught
+        } else if enable && status == .requiresApproval {
+            lastError = "Approval required — open System Settings → General → Login Items and enable MCFinder."
+        } else {
+            lastError = nil
+        }
+    }
+}

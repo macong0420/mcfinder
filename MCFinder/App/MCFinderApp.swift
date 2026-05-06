@@ -62,6 +62,9 @@ struct MCFinderApp: App {
             backing: .buffered,
             defer: false
         )
+        // See AppState.openSettings — NSWindow's legacy `isReleasedWhenClosed`
+        // default fights ARC and produces zombie references on reopen.
+        window.isReleasedWhenClosed = false
         window.title = "About MCFinder"
         window.contentView = NSHostingView(rootView: AboutView())
         window.center()

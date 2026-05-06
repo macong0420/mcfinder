@@ -50,20 +50,34 @@ final class QuickSearchPanel: NSPanel {
     }
 
     func show() {
-        guard let screen = NSScreen.main else { return }
+        guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
         let screenFrame = screen.visibleFrame
 
         let panelWidth: CGFloat = 600
-        let panelHeight: CGFloat = 70
+        // Always allocate enough height for the expanded results list. The
+        // SwiftUI content draws its rounded material only around the actual
+        // VStack (search field + results), so unused panel space is invisible
+        // and inert — see QuickSearchView.body.
+        let panelHeight: CGFloat = 400
 
-        var frame = NSRect(
-            x: screenFrame.midX - panelWidth / 2,
-            y: screenFrame.maxY - panelHeight - 60,
+        // Spotlight-style placement: panel's TOP edge sits in the upper third
+        // of the visible screen, horizontally centred.
+        //
+        // Cocoa origin is bottom-left, so we compute originY from the *top*:
+        //   panelTopY (in screen coords) = screenFrame.maxY - topMargin
+        //   originY                       = panelTopY - panelHeight
+        // Previously the code mutated `frame.size.height` after setting `y`
+        // assuming a 70pt panel, which let the panel grow upward off-screen
+        // and forced macOS to clamp it flush against the menu bar.
+        let topMargin = max(80, (screenFrame.height - panelHeight) / 4)
+        let originY = screenFrame.maxY - panelHeight - topMargin
+
+        let frame = NSRect(
+            x: round(screenFrame.midX - panelWidth / 2),
+            y: round(originY),
             width: panelWidth,
             height: panelHeight
         )
-        // Account for results expansion
-        frame.size.height = 400
 
         setFrame(frame, display: false)
         quickSearchState.reset()

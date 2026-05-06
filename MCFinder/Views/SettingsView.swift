@@ -85,11 +85,41 @@ struct SettingsView: View {
     // MARK: - General
 
     private var generalTab: some View {
+        GeneralTabView(loginManager: appState.launchAtLoginManager)
+    }
+}
+
+/// Extracted as its own view so we can attach `@ObservedObject` to the
+/// LaunchAtLoginManager — necessary for the toggle to update reactively when
+/// macOS reports a state change (or `requiresApproval`) back to us.
+private struct GeneralTabView: View {
+    @ObservedObject var loginManager: LaunchAtLoginManager
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("General")
                 .font(.headline)
 
-            Toggle("Launch at Login", isOn: .constant(false))
+            Toggle("Launch at Login", isOn: Binding(
+                get: { loginManager.isEnabled },
+                set: { loginManager.setEnabled($0) }
+            ))
+
+            if let error = loginManager.lastError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                // Surfaced as a separate user gesture so the focus change
+                // doesn't race the Toggle binding's @Published mutations.
+                Button("Open Login Items in System Settings…") {
+                    loginManager.openLoginItemsSettings()
+                }
+                .buttonStyle(.link)
+            }
+
+            Divider()
 
             Text("MCFinder v1.0.0")
                 .font(.caption)
@@ -98,7 +128,10 @@ struct SettingsView: View {
             Text("Copyright (c) 2026 MCFinder. All rights reserved.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+
+            Spacer()
         }
         .padding()
+        .onAppear { loginManager.refresh() }
     }
 }

@@ -1,6 +1,31 @@
 import Carbon
 import AppKit
 
+/// Outcome of a single `RegisterEventHotKey` attempt.
+///
+/// Surfaced to the UI so users can tell whether their chosen combination is
+/// valid, conflicts with another app/system, or fails for some other reason.
+enum HotkeyRegistrationResult: Equatable {
+    case success
+    case noModifier
+    case alreadyTaken
+    case failed(OSStatus)
+
+    /// Human-readable hint suitable for display under the recorder. `nil` on success.
+    var errorMessage: String? {
+        switch self {
+        case .success:
+            return nil
+        case .noModifier:
+            return "Add a modifier (⌘ ⌥ ⌃ ⇧) — bare keys cannot be used as global shortcuts."
+        case .alreadyTaken:
+            return "This shortcut is already used by another app or macOS — try a different combination."
+        case .failed(let status):
+            return "Could not register shortcut (OSStatus \(status))."
+        }
+    }
+}
+
 final class KeyboardShortcutManager {
     private var mainHotKeyRef: EventHotKeyRef?
     private var quickSearchHotKeyRef: EventHotKeyRef?
@@ -13,48 +38,57 @@ final class KeyboardShortcutManager {
     private let mainHotKeyID = EventHotKeyID(signature: 0x4D434644, id: 1)
     private let quickSearchHotKeyID = EventHotKeyID(signature: 0x4D434644, id: 2)
 
+    // Carbon's `eventHotKeyExistsErr` constant (defined in MacErrors.h). Returned
+    // by `RegisterEventHotKey` when another app — or macOS itself — owns the
+    // combo. Hard-coded because it is not surfaced as a Swift symbol.
+    private let eventHotKeyExistsErr: OSStatus = -9878
+
     deinit { unregisterAll() }
 
-    func registerMainHotkey(keyCode: Int, modifiers: NSEvent.ModifierFlags) -> Bool {
+    @discardableResult
+    func registerMainHotkey(keyCode: Int, modifiers: NSEvent.ModifierFlags) -> HotkeyRegistrationResult {
         unregisterMainHotkey()
         // Refuse to register a global hotkey that has no modifiers — that
         // would steal a bare key (e.g. Space, keyCode 49) system-wide.
         // This guards against corrupted UserDefaults and accidental UI states.
         let carbonMods = modifiers.carbonModifiers
-        guard carbonMods != 0 else { return false }
+        guard carbonMods != 0 else { return .noModifier }
         var hotKeyRef: EventHotKeyRef?
         let status = RegisterEventHotKey(
             UInt32(keyCode), carbonMods, mainHotKeyID,
             GetApplicationEventTarget(), 0, &hotKeyRef
         )
-        guard status == noErr, let ref = hotKeyRef else {
-            // Logger.hotkey.warning("[HotkeyManager] Main hotkey status=register_failed (keyCode: \(keyCode))")
-            return false
+        if status == noErr, let ref = hotKeyRef {
+            mainHotKeyRef = ref
+            installMainHandler()
+            return .success
         }
-        mainHotKeyRef = ref
-        installMainHandler()
-        // Logger.hotkey.info("[HotkeyManager] Main hotkey status=registered (keyCode: \(keyCode))")
-        return true
+        if status == eventHotKeyExistsErr {
+            return .alreadyTaken
+        }
+        return .failed(status)
     }
 
-    func registerQuickSearchHotkey(keyCode: Int, modifiers: NSEvent.ModifierFlags) -> Bool {
+    @discardableResult
+    func registerQuickSearchHotkey(keyCode: Int, modifiers: NSEvent.ModifierFlags) -> HotkeyRegistrationResult {
         unregisterQuickSearchHotkey()
         // Same guard as the main hotkey: never register a bare key globally.
         let carbonMods = modifiers.carbonModifiers
-        guard carbonMods != 0 else { return false }
+        guard carbonMods != 0 else { return .noModifier }
         var hotKeyRef: EventHotKeyRef?
         let status = RegisterEventHotKey(
             UInt32(keyCode), carbonMods, quickSearchHotKeyID,
             GetApplicationEventTarget(), 0, &hotKeyRef
         )
-        guard status == noErr, let ref = hotKeyRef else {
-            // Logger.hotkey.warning("[HotkeyManager] Quick search hotkey status=register_failed (keyCode: \(keyCode))")
-            return false
+        if status == noErr, let ref = hotKeyRef {
+            quickSearchHotKeyRef = ref
+            installQuickSearchHandler()
+            return .success
         }
-        quickSearchHotKeyRef = ref
-        installQuickSearchHandler()
-        // Logger.hotkey.info("[HotkeyManager] Quick search hotkey status=registered (keyCode: \(keyCode))")
-        return true
+        if status == eventHotKeyExistsErr {
+            return .alreadyTaken
+        }
+        return .failed(status)
     }
 
     func unregisterAll() {

@@ -16,7 +16,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let quickSearchPanel: QuickSearchPanel
     let indexManager: IndexManager
     private var localEventMonitor: Any?
+    private weak var cachedMainWindow: NSWindow?
     weak var appState: AppState?
+
+    /// Resolves the SwiftUI `WindowGroup` main window — the one the user
+    /// thinks of as "MCFinder". `NSApp.windows.first` is unreliable here:
+    /// `QuickSearchPanel` is created in `init` *before* SwiftUI builds its
+    /// scene, so it lands first in the windows list and `.first` would
+    /// happily return that panel, making the main hotkey accidentally
+    /// activate the QuickSearch overlay. Filtering on "not an NSPanel + has
+    /// a titlebar" pins it to the WindowGroup window. Result is cached so a
+    /// later-opened About window can't shadow it.
+    private var mainAppWindow: NSWindow? {
+        if let w = cachedMainWindow, NSApp.windows.contains(w) { return w }
+        let found = NSApp.windows.first { window in
+            !(window is NSPanel) && window.styleMask.contains(.titled)
+        }
+        cachedMainWindow = found
+        return found
+    }
 
     override init() {
         let db = DatabaseManager()
@@ -68,7 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupLocalEventMonitor()
         restoreBookmarksAndWatch()
 
-        if let window = NSApp.windows.first {
+        if let window = mainAppWindow {
             window.delegate = self
         }
     }
@@ -84,7 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag, let window = NSApp.windows.first {
+        if !flag, let window = mainAppWindow {
             window.makeKeyAndOrderFront(nil)
         }
         return true
@@ -94,16 +112,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupHotkeys() {
         guard let appState else { return }
-        _ = keyboardShortcutManager.registerMainHotkey(keyCode: appState.hotkeyKeyCode, modifiers: appState.hotkeyModifiers)
-        keyboardShortcutManager.onMainHotkey = {
-            if let window = NSApp.windows.first {
-                window.makeKeyAndOrderFront(nil)
-                NSApp.activate(ignoringOtherApps: true)
-            }
+        // Install the callbacks first, so even a hot-key press that races the
+        // `RegisterEventHotKey` call has a handler ready.
+        keyboardShortcutManager.onMainHotkey = { [weak self] in
+            self?.toggleMainWindow()
         }
-        _ = keyboardShortcutManager.registerQuickSearchHotkey(keyCode: appState.quickSearchKeyCode, modifiers: appState.quickSearchModifiers)
-        keyboardShortcutManager.onQuickSearchHotkey = {
-            appState.toggleQuickSearch()
+        keyboardShortcutManager.onQuickSearchHotkey = { [weak appState] in
+            appState?.toggleQuickSearch()
+        }
+        // Single unified registration path — also surfaces conflicts in
+        // `appState.hotkeyErrors` so the UI can display them.
+        appState.applyAllHotkeys()
+    }
+
+    /// Show / hide the main window in response to the global "Main Window"
+    /// hotkey. Behaviour matches Spotlight-style overlays:
+    ///   - Hidden / not key  → bring to front + activate the app.
+    ///   - Visible & focused → hide the whole app (returns focus to whatever
+    ///     the user came from). `orderOut` on a single window would leave
+    ///     other MCFinder windows on screen and feel half-finished.
+    private func toggleMainWindow() {
+        guard let window = mainAppWindow else { return }
+        if window.isMiniaturized {
+            window.deminiaturize(nil)
+        }
+        if window.isVisible && window.isKeyWindow && NSApp.isActive {
+            NSApp.hide(nil)
+        } else {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
         }
     }
 
