@@ -158,9 +158,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func restoreBookmarksAndWatch() {
         guard let appState else { return }
         let resolvedURLs = bookmarkManager.restoreAllBookmarks()
-        let pathStrings = resolvedURLs.map { $0.path }
-        if !pathStrings.isEmpty {
-            fsEventsMonitor.startWatching(paths: pathStrings)
+        let bookmarkedPaths = resolvedURLs.map { $0.path }
+        let autoPaths = bookmarkManager.allAutoEntitlementPaths()
+        let allPaths = Array(Set(bookmarkedPaths + autoPaths))
+        if !allPaths.isEmpty {
+            fsEventsMonitor.startWatching(paths: allPaths)
             appState.updateTotalIndexed()
         }
     }

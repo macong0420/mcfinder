@@ -390,7 +390,7 @@ struct ResultsListView: View {
                                 onOpen: { appState.openFile(item) },
                                 onReveal: { appState.revealInFinder(item) },
                                 onCopyPath: { appState.copyPath(item) },
-                                onQuickLook: { appState.toggleQuickLook(for: item) }
+                                onQuickLook: { appState.showQuickLook(for: item) }
                             )
                             .id(item.id)
                             .onTapGesture {

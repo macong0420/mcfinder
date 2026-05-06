@@ -92,7 +92,9 @@ final class AppState: ObservableObject {
     }
 
     var scanPaths: [String] {
-        bookmarkManager?.allBookmarkedPaths() ?? []
+        let bookmarked = bookmarkManager?.allBookmarkedPaths() ?? []
+        let autoEntitlement = bookmarkManager?.allAutoEntitlementPaths() ?? []
+        return Array(Set(bookmarked + autoEntitlement)).sorted()
     }
 
     // MARK: - Setup
@@ -193,14 +195,24 @@ final class AppState: ObservableObject {
             guard let self else { return }
 
             var resolved: [URL] = []
+            // Only track URLs that actually need security-scoped cleanup.
+            var bookmarkedURLs: [URL] = []
             for url in paths {
-                do {
-                    let data = try bookmarkManager.createBookmark(for: url)
-                    bookmarkManager.saveBookmark(data, forPath: url.path)
-                    let r = try bookmarkManager.resolveAndStartAccessing(data)
-                    resolved.append(r)
-                } catch {
-                    // Logger.app.error("Bookmark error for \(url.path): \(error)")
+                if BookmarkManager.isAutoEntitlementPath(url) {
+                    // ~/Desktop, ~/Documents, ~/Downloads — access granted by
+                    // entitlements, no security-scoped bookmark needed.
+                    bookmarkManager.saveAutoEntitlementPath(url.path)
+                    resolved.append(url)
+                } else {
+                    do {
+                        let data = try bookmarkManager.createBookmark(for: url)
+                        bookmarkManager.saveBookmark(data, forPath: url.path)
+                        let r = try bookmarkManager.resolveAndStartAccessing(data)
+                        resolved.append(r)
+                        bookmarkedURLs.append(r)
+                    } catch {
+                        // Logger.app.error("Bookmark error for \(url.path): \(error)")
+                    }
                 }
             }
 
@@ -212,17 +224,17 @@ final class AppState: ObservableObject {
                 }.value
 
                 if Task.isCancelled {
-                    bookmarkManager.stopAllAccess(urls: resolved)
+                    bookmarkManager.stopAllAccess(urls: bookmarkedURLs)
                     return
                 }
 
                 totalIndexed = count
-                bookmarkManager.stopAllAccess(urls: resolved)
+                bookmarkManager.stopAllAccess(urls: bookmarkedURLs)
                 fsEventsMonitor?.startWatching(paths: resolved.map { $0.path })
             } catch is CancellationError {
-                bookmarkManager.stopAllAccess(urls: resolved)
+                bookmarkManager.stopAllAccess(urls: bookmarkedURLs)
             } catch {
-                bookmarkManager.stopAllAccess(urls: resolved)
+                bookmarkManager.stopAllAccess(urls: bookmarkedURLs)
                 errorMessage = error.localizedDescription
             }
 
@@ -292,10 +304,17 @@ final class AppState: ObservableObject {
     }
 
     func addFolderToIndex() async {
-        guard let url = await BookmarkManager.promptUserToSelectFolder() else { return }
-        startScan(paths: [url])
+        let urls = await BookmarkManager.promptUserToSelectFolders()
+        guard !urls.isEmpty else { return }
+        startScan(paths: urls)
     }
 
+    /// Show preview for a file (single-click). Always opens, never toggles.
+    func showQuickLook(for item: SearchResultItem) {
+        quickLookCoordinator?.showPreview(for: [URL(fileURLWithPath: item.path)])
+    }
+
+    /// Toggle preview visibility (keyboard shortcut).
     func toggleQuickLook(for item: SearchResultItem) {
         quickLookCoordinator?.togglePreview(for: [URL(fileURLWithPath: item.path)])
     }

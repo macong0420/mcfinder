@@ -40,6 +40,7 @@ struct SettingsView: View {
                             Spacer()
                             Button(role: .destructive) {
                                 appState.bookmarkManager?.removeBookmark(forPath: path)
+                                appState.bookmarkManager?.removeAutoEntitlementPath(path)
                                 do {
                                     try appState.indexManager?.cleanupRemovedDirectory(at: path)
                                 } catch {
@@ -63,7 +64,7 @@ struct SettingsView: View {
                 Spacer()
                 if !appState.scanPaths.isEmpty {
                     Button("Rescan All") {
-                        let urls = appState.bookmarkManager?.allBookmarkedPaths().map { URL(fileURLWithPath: $0) } ?? []
+                        let urls = appState.scanPaths.map { URL(fileURLWithPath: $0) }
                         appState.startScan(paths: urls)
                     }
                     Button("Clear All", role: .destructive) {

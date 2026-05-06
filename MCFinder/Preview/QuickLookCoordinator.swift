@@ -54,14 +54,28 @@ final class QuickLookCoordinator: NSObject, QLPreviewPanelDataSource, QLPreviewP
         setPreviewItems(urls: [url])
     }
 
+    /// Always show the preview panel for the given URLs.
+    /// Used by single-click to avoid the confusing toggle-on-same-row behavior.
+    func showPreview(for urls: [URL]) {
+        guard let panel = QLPreviewPanel.shared() else { return }
+        setPreviewItems(urls: urls)
+        // Explicitly wire delegate/dataSource — in SwiftUI the coordinator
+        // is not in the window's responder chain, so the standard
+        // beginPreviewPanelControl callback is never invoked.
+        panel.delegate = self
+        panel.dataSource = self
+        panel.makeKeyAndOrderFront(nil)
+    }
+
+    /// Toggle the preview panel visibility.
+    /// Used by keyboard shortcut (space bar) where toggle semantics are expected.
     func togglePreview(for urls: [URL]) {
         guard let panel = QLPreviewPanel.shared() else { return }
 
         if panel.isVisible {
             panel.orderOut(nil)
         } else {
-            setPreviewItems(urls: urls)
-            panel.makeKeyAndOrderFront(nil)
+            showPreview(for: urls)
         }
     }
 
