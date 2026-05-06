@@ -2,6 +2,24 @@ import Foundation
 import SQLite3
 import OSLog
 
+/// `SQLITE_TRANSIENT` tells SQLite to copy the bound string immediately.
+/// We must use this — not `nil` (== `SQLITE_STATIC`) — because the bound
+/// pointer comes from a temporary `NSString` bridge that is released as
+/// soon as `bind_text` returns. Using `SQLITE_STATIC` writes dangling
+/// memory into the row and is the reason previously-indexed files
+/// looked "stored" but were unsearchable.
+private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+
+/// Thread-safe wrapper around a single SQLite connection.
+///
+/// All sqlite3_* calls are funneled through `dbQueue` so we never violate
+/// the connection's "one thread at a time" invariant. The crash
+/// `BUG IN CLIENT OF libsqlite3.dylib: illegal multi-threaded access to
+/// database connection` is what happens when this rule is broken.
+///
+/// Public methods are safe to call from any thread/queue. Re-entrant calls
+/// from inside the queue must use the private `_unsafe*` helpers — calling
+/// a public method recursively from within `dbQueue` would deadlock.
 final class DatabaseManager: @unchecked Sendable {
     private let dbQueue: DispatchQueue
     private var db: OpaquePointer?
@@ -9,9 +27,9 @@ final class DatabaseManager: @unchecked Sendable {
     init() {
         dbQueue = DispatchQueue(label: "com.mcfinder.db", qos: .userInitiated)
         dbQueue.sync {
-            self.openDatabase()
-            self.configureDatabase()
-            self.createSchema()
+            self._openDatabase()
+            self._configureDatabase()
+            self._createSchema()
         }
     }
 
@@ -21,22 +39,25 @@ final class DatabaseManager: @unchecked Sendable {
         }
     }
 
-    // MARK: - Open / Configure
+    // MARK: - Open / Configure (must run on dbQueue)
 
-    private func openDatabase() {
+    private func _openDatabase() {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let dbDir = appSupport.appendingPathComponent("MCFinder")
         try? FileManager.default.createDirectory(at: dbDir, withIntermediateDirectories: true)
         let dbPath = dbDir.appendingPathComponent("mcfinder.db").path
 
-        if sqlite3_open(dbPath, &db) != SQLITE_OK {
-            // Logger.database.error("Failed to open database at \(dbPath)")
+        // Open in full-mutex (serialized) mode. We additionally serialize
+        // through `dbQueue`, but FULLMUTEX is a defense-in-depth measure
+        // against any Apple-framework code that touches the handle.
+        let flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX
+        if sqlite3_open_v2(dbPath, &db, flags, nil) != SQLITE_OK {
+            db = nil
             return
         }
-        // Logger.database.info("Database opened at \(dbPath)")
     }
 
-    private func configureDatabase() {
+    private func _configureDatabase() {
         guard let db else { return }
         let pragmas: [(String, String)] = [
             ("journal_mode", "WAL"),
@@ -45,6 +66,7 @@ final class DatabaseManager: @unchecked Sendable {
             ("mmap_size", "268435456"),
             ("temp_store", "MEMORY"),
             ("foreign_keys", "ON"),
+            ("busy_timeout", "5000"),
         ]
         for (key, value) in pragmas {
             var stmt: OpaquePointer?
@@ -59,7 +81,11 @@ final class DatabaseManager: @unchecked Sendable {
     // MARK: - Schema
 
     func createSchema() {
-        guard let db else { return }
+        dbQueue.sync { _createSchema() }
+    }
+
+    private func _createSchema() {
+        guard db != nil else { return }
 
         let createFiles = """
         CREATE TABLE IF NOT EXISTS files (
@@ -109,17 +135,46 @@ final class DatabaseManager: @unchecked Sendable {
             "CREATE INDEX IF NOT EXISTS idx_size ON files(size);",
         ]
 
-        executeRaw(createFiles)
-        executeRaw(createFTS)
-        executeRaw(triggerInsert)
-        executeRaw(triggerDelete)
-        executeRaw(triggerUpdate)
-        for idx in indexes { executeRaw(idx) }
+        _executeRaw(createFiles)
+        _executeRaw(createFTS)
+        _executeRaw(triggerInsert)
+        _executeRaw(triggerDelete)
+        _executeRaw(triggerUpdate)
+        for idx in indexes { _executeRaw(idx) }
     }
 
-    // MARK: - Core Execute Methods
+    // MARK: - Public Execute API (thread-safe)
 
     func execute<T>(_ sql: String, parameters: [DatabaseValue] = [], body: (OpaquePointer) throws -> T) throws -> T {
+        try dbQueue.sync { try _execute(sql, parameters: parameters, body: body) }
+    }
+
+    func executeWrite(_ sql: String, parameters: [DatabaseValue] = []) throws {
+        try dbQueue.sync { try _executeWrite(sql, parameters: parameters) }
+    }
+
+    func executeQuery<T>(_ sql: String, parameters: [DatabaseValue] = [], mapper: (OpaquePointer) throws -> T) throws -> [T] {
+        try dbQueue.sync { try _executeQuery(sql, parameters: parameters, mapper: mapper) }
+    }
+
+    func executeBatchWrite(_ statements: [(sql: String, params: [DatabaseValue])]) throws {
+        try dbQueue.sync {
+            _executeRaw("BEGIN TRANSACTION")
+            do {
+                for (sql, params) in statements {
+                    try _executeWrite(sql, parameters: params)
+                }
+                _executeRaw("COMMIT")
+            } catch {
+                _executeRaw("ROLLBACK")
+                throw error
+            }
+        }
+    }
+
+    // MARK: - Internal Execute (caller must already hold dbQueue)
+
+    private func _execute<T>(_ sql: String, parameters: [DatabaseValue], body: (OpaquePointer) throws -> T) throws -> T {
         guard let db else { throw DatabaseError.notOpen }
 
         var stmt: OpaquePointer?
@@ -130,19 +185,7 @@ final class DatabaseManager: @unchecked Sendable {
         }
         defer { sqlite3_finalize(statement) }
 
-        for (index, param) in parameters.enumerated() {
-            let idx = Int32(index + 1)
-            switch param {
-            case .null:
-                sqlite3_bind_null(statement, idx)
-            case .integer(let v):
-                sqlite3_bind_int64(statement, idx, v)
-            case .real(let v):
-                sqlite3_bind_double(statement, idx, v)
-            case .text(let v):
-                sqlite3_bind_text(statement, idx, (v as NSString).utf8String, -1, nil)
-            }
-        }
+        try _bind(parameters, to: statement)
 
         let stepResult = sqlite3_step(statement)
         if stepResult == SQLITE_ROW || stepResult == SQLITE_DONE {
@@ -153,7 +196,7 @@ final class DatabaseManager: @unchecked Sendable {
         throw DatabaseError.executionFailed(errorMsg)
     }
 
-    func executeWrite(_ sql: String, parameters: [DatabaseValue] = []) throws {
+    private func _executeWrite(_ sql: String, parameters: [DatabaseValue]) throws {
         guard let db else { throw DatabaseError.notOpen }
 
         var stmt: OpaquePointer?
@@ -164,15 +207,7 @@ final class DatabaseManager: @unchecked Sendable {
         }
         defer { sqlite3_finalize(statement) }
 
-        for (index, param) in parameters.enumerated() {
-            let idx = Int32(index + 1)
-            switch param {
-            case .null: sqlite3_bind_null(statement, idx)
-            case .integer(let v): sqlite3_bind_int64(statement, idx, v)
-            case .real(let v): sqlite3_bind_double(statement, idx, v)
-            case .text(let v): sqlite3_bind_text(statement, idx, (v as NSString).utf8String, -1, nil)
-            }
-        }
+        try _bind(parameters, to: statement)
 
         let stepResult = sqlite3_step(statement)
         guard stepResult == SQLITE_DONE || stepResult == SQLITE_ROW else {
@@ -181,7 +216,7 @@ final class DatabaseManager: @unchecked Sendable {
         }
     }
 
-    func executeQuery<T>(_ sql: String, parameters: [DatabaseValue] = [], mapper: (OpaquePointer) throws -> T) throws -> [T] {
+    private func _executeQuery<T>(_ sql: String, parameters: [DatabaseValue], mapper: (OpaquePointer) throws -> T) throws -> [T] {
         guard let db else { throw DatabaseError.notOpen }
 
         var stmt: OpaquePointer?
@@ -192,15 +227,7 @@ final class DatabaseManager: @unchecked Sendable {
         }
         defer { sqlite3_finalize(statement) }
 
-        for (index, param) in parameters.enumerated() {
-            let idx = Int32(index + 1)
-            switch param {
-            case .null: sqlite3_bind_null(statement, idx)
-            case .integer(let v): sqlite3_bind_int64(statement, idx, v)
-            case .real(let v): sqlite3_bind_double(statement, idx, v)
-            case .text(let v): sqlite3_bind_text(statement, idx, (v as NSString).utf8String, -1, nil)
-            }
-        }
+        try _bind(parameters, to: statement)
 
         var results: [T] = []
         while sqlite3_step(statement) == SQLITE_ROW {
@@ -209,33 +236,36 @@ final class DatabaseManager: @unchecked Sendable {
         return results
     }
 
-    func executeBatchWrite(_ statements: [(sql: String, params: [DatabaseValue])]) throws {
-        guard let db else { throw DatabaseError.notOpen }
-
-        executeRaw("BEGIN TRANSACTION")
-        do {
-            for (sql, params) in statements {
-                try executeWrite(sql, parameters: params)
+    private func _bind(_ parameters: [DatabaseValue], to statement: OpaquePointer) throws {
+        for (index, param) in parameters.enumerated() {
+            let idx = Int32(index + 1)
+            switch param {
+            case .null:
+                sqlite3_bind_null(statement, idx)
+            case .integer(let v):
+                sqlite3_bind_int64(statement, idx, v)
+            case .real(let v):
+                sqlite3_bind_double(statement, idx, v)
+            case .text(let v):
+                // SQLITE_TRANSIENT: SQLite copies the bytes immediately.
+                // Required because the UTF-8 buffer below is owned by a
+                // temporary; using SQLITE_STATIC (nil) corrupts the row.
+                sqlite3_bind_text(statement, idx, v, -1, SQLITE_TRANSIENT)
             }
-            executeRaw("COMMIT")
-        } catch {
-            executeRaw("ROLLBACK")
-            throw error
         }
     }
 
-    private func executeRaw(_ sql: String) {
+    private func _executeRaw(_ sql: String) {
         guard let db else { return }
         var errMsg: UnsafeMutablePointer<CChar>?
         if sqlite3_exec(db, sql, nil, nil, &errMsg) != SQLITE_OK {
             if let msg = errMsg {
-                // Logger.database.error("SQL error: \(String(cString: msg))")
                 sqlite3_free(msg)
             }
         }
     }
 
-    // MARK: - File Operations
+    // MARK: - File Operations (thread-safe)
 
     func insertFiles(_ files: [FileRecord]) throws {
         let sql = """
@@ -258,6 +288,7 @@ final class DatabaseManager: @unchecked Sendable {
     }
 
     func deleteFiles(inPaths paths: [String]) throws {
+        guard !paths.isEmpty else { return }
         let placeholders = paths.map { _ in "?" }.joined(separator: ",")
         let params = paths.map { DatabaseValue.text($0) }
         try executeWrite("DELETE FROM files WHERE path IN (\(placeholders))", parameters: params)
@@ -271,8 +302,10 @@ final class DatabaseManager: @unchecked Sendable {
     }
 
     func deleteAllFiles() throws {
-        try executeWrite("DELETE FROM files", parameters: [])
-        try executeWrite("INSERT INTO files_fts(files_fts) VALUES('rebuild')", parameters: [])
+        try dbQueue.sync {
+            try _executeWrite("DELETE FROM files", parameters: [])
+            try _executeWrite("INSERT INTO files_fts(files_fts) VALUES('rebuild')", parameters: [])
+        }
     }
 
     func getPathsInRange(start: String, end: String) throws -> [(path: String, modifiedAt: Double)] {
@@ -303,18 +336,17 @@ final class DatabaseManager: @unchecked Sendable {
 
     func checkFTSIntegrity() -> (fileCount: Int, ftsCount: Int) {
         do {
-            let fc = try execute(
+            return try execute(
                 "SELECT (SELECT COUNT(*) FROM files), (SELECT COUNT(*) FROM files_fts)", parameters: []
             ) { stmt in
                 (Int(sqlite3_column_int(stmt, 0)), Int(sqlite3_column_int(stmt, 1)))
             }
-            return fc
         } catch {
             return (0, 0)
         }
     }
 
-    // MARK: - Thread-Safe Execution
+    // MARK: - Thread-Safe Execution Helpers
 
     func sync<T>(_ block: () throws -> T) rethrows -> T {
         try dbQueue.sync(execute: block)

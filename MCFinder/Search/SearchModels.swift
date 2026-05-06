@@ -1,9 +1,10 @@
 import Foundation
 
 enum SearchMode: String, CaseIterable {
-    case fts5
-    case substring
     case exact
+    case contains
+    case prefix
+    case pathContains
 }
 
 enum FileTypeFilter: String, CaseIterable {

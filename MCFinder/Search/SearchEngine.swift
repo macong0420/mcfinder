@@ -1,7 +1,7 @@
 import Foundation
 import SQLite3
 
-final class SearchEngine {
+final class SearchEngine: @unchecked Sendable {
     private let databaseManager: DatabaseManager
 
     init(databaseManager: DatabaseManager) {
@@ -19,7 +19,7 @@ final class SearchEngine {
         filter: SearchFilter = SearchFilter(),
         sort: SortField = .date,
         ascending: Bool = false,
-        mode: SearchMode = .fts5,
+        mode: SearchMode = .contains,
         limit: Int = 200
     ) throws -> SearchResult {
         let startTime = Date()
@@ -67,10 +67,14 @@ final class SearchEngine {
 
         if !text.isEmpty {
             let (ftsClause, ftsParams) = buildFTSMatch(text: text, mode: mode)
-            fromClause += " LEFT JOIN files_fts ON f.id = files_fts.rowid"
+            if mode == .pathContains {
+                fromClause += " LEFT JOIN files_fts ON f.id = files_fts.rowid"
+            }
             whereClauses.append(ftsClause)
             params.append(contentsOf: ftsParams)
         }
+
+        whereClauses.append("f.path NOT LIKE '%/.%'")
 
         let filterResult = buildFilterClause(filter: filter)
         if !filterResult.clause.isEmpty {
@@ -86,18 +90,23 @@ final class SearchEngine {
 
     private func buildFTSMatch(text: String, mode: SearchMode) -> (String, [DatabaseValue]) {
         switch mode {
-        case .fts5:
-            return ("files_fts MATCH ?", [.text(buildFTS5Query(from: text))])
-        case .substring:
-            return ("(LOWER(f.name) LIKE ? ESCAPE '\\' OR LOWER(f.path) LIKE ? ESCAPE '\\')", [
-                .text("%" + escapeLikeWildcards(text.lowercased()) + "%"),
-                .text("%" + escapeLikeWildcards(text.lowercased()) + "%"),
-            ])
         case .exact:
             return ("(LOWER(f.name) = ? OR LOWER(f.path) = ?)", [
                 .text(text.lowercased()),
                 .text(text.lowercased()),
             ])
+        case .contains:
+            return ("(LOWER(f.name) LIKE ? ESCAPE '\\' OR LOWER(f.path) LIKE ? ESCAPE '\\')", [
+                .text("%" + escapeLikeWildcards(text.lowercased()) + "%"),
+                .text("%" + escapeLikeWildcards(text.lowercased()) + "%"),
+            ])
+        case .prefix:
+            return ("(LOWER(f.name) LIKE ? ESCAPE '\\' OR LOWER(f.path) LIKE ? ESCAPE '\\')", [
+                .text(escapeLikeWildcards(text.lowercased()) + "%"),
+                .text(escapeLikeWildcards(text.lowercased()) + "%"),
+            ])
+        case .pathContains:
+            return ("files_fts MATCH ?", [.text(buildFTS5Query(from: text))])
         }
     }
 
@@ -222,15 +231,40 @@ final class SearchEngine {
 
         let lowerText = text.lowercased()
         params.append(.text(lowerText))
-        params.append(.text(lowerText + "%"))
+        let nameBonus = "(100.0 / MAX(LENGTH(f.name), 1))"
 
         switch mode {
         case .exact:
-            return "CASE WHEN LOWER(f.name) = ? THEN 100 WHEN LOWER(f.name) LIKE ? ESCAPE '\\' THEN 60 ELSE 1 END"
-        case .substring:
-            return "CASE WHEN LOWER(f.name) = ? THEN 100 WHEN LOWER(f.name) LIKE ? ESCAPE '\\' THEN 60 ELSE 10 END"
-        case .fts5:
-            return "CASE WHEN LOWER(f.name) = ? THEN 100 WHEN LOWER(f.name) LIKE ? ESCAPE '\\' THEN 80 ELSE 0 END + COALESCE(files_fts.rank, 0.0)"
+            return "CASE WHEN LOWER(f.name) = ? THEN 100 ELSE 0 END + \(nameBonus)"
+
+        case .contains:
+            params.append(.text(lowerText + "%"))
+            params.append(.text("%" + lowerText + "%"))
+            return """
+            CASE WHEN LOWER(f.name) = ? THEN 100 \
+                 WHEN LOWER(f.name) LIKE ? ESCAPE '\\' THEN 80 \
+                 WHEN LOWER(f.name) LIKE ? ESCAPE '\\' THEN 50 \
+                 ELSE 0 \
+            END + \(nameBonus)
+            """
+
+        case .prefix:
+            params.append(.text(lowerText + "%"))
+            return """
+            CASE WHEN LOWER(f.name) = ? THEN 100 \
+                 WHEN LOWER(f.name) LIKE ? ESCAPE '\\' THEN 80 \
+                 ELSE 0 \
+            END + \(nameBonus)
+            """
+
+        case .pathContains:
+            params.append(.text(lowerText + "%"))
+            return """
+            CASE WHEN LOWER(f.name) = ? THEN 100 \
+                 WHEN LOWER(f.name) LIKE ? ESCAPE '\\' THEN 80 \
+                 ELSE 50 \
+            END + \(nameBonus) + COALESCE(files_fts.rank, 0.0)
+            """
         }
     }
 }

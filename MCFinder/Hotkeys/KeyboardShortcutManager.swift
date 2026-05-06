@@ -17,7 +17,11 @@ final class KeyboardShortcutManager {
 
     func registerMainHotkey(keyCode: Int, modifiers: NSEvent.ModifierFlags) -> Bool {
         unregisterMainHotkey()
+        // Refuse to register a global hotkey that has no modifiers — that
+        // would steal a bare key (e.g. Space, keyCode 49) system-wide.
+        // This guards against corrupted UserDefaults and accidental UI states.
         let carbonMods = modifiers.carbonModifiers
+        guard carbonMods != 0 else { return false }
         var hotKeyRef: EventHotKeyRef?
         let status = RegisterEventHotKey(
             UInt32(keyCode), carbonMods, mainHotKeyID,
@@ -35,7 +39,9 @@ final class KeyboardShortcutManager {
 
     func registerQuickSearchHotkey(keyCode: Int, modifiers: NSEvent.ModifierFlags) -> Bool {
         unregisterQuickSearchHotkey()
+        // Same guard as the main hotkey: never register a bare key globally.
         let carbonMods = modifiers.carbonModifiers
+        guard carbonMods != 0 else { return false }
         var hotKeyRef: EventHotKeyRef?
         let status = RegisterEventHotKey(
             UInt32(keyCode), carbonMods, quickSearchHotKeyID,

@@ -21,10 +21,7 @@ final class FSEventsMonitor: @unchecked Sendable {
 
     func startWatching(paths: [String]) {
         stopWatching()
-        guard !paths.isEmpty else {
-            // Logger.fsEvents.info("No paths to watch")
-            return
-        }
+        guard !paths.isEmpty else { return }
 
         var context = FSEventStreamContext(
             version: 0,
@@ -49,14 +46,12 @@ final class FSEventsMonitor: @unchecked Sendable {
             1.0,
             flags
         ) else {
-            // Logger.fsEvents.error("Failed to create FSEventStream")
             return
         }
 
         FSEventStreamSetDispatchQueue(stream, callbackQueue)
         FSEventStreamStart(stream)
         streams.append(stream)
-        // Logger.fsEvents.info("Started watching \(paths.count) paths")
     }
 
     func stopWatching() {
@@ -87,6 +82,14 @@ final class FSEventsMonitor: @unchecked Sendable {
     }
 }
 
+// FSEventStream callback.
+//
+// IMPORTANT: when the stream is created with `kFSEventStreamCreateFlagUseCFTypes`,
+// the `eventPaths` parameter IS the `CFArrayRef` itself — not a pointer to one.
+// The previous implementation did `eventPaths.assumingMemoryBound(to: UMRP?.self).pointee`,
+// dereferencing one extra level, which read 8 bytes of garbage and crashed
+// (`EXC_BAD_ACCESS` on Thread 4 / com.mcfinder.fsevents) the moment any file
+// system event arrived. Cast `eventPaths` directly as a CFArray.
 private func fsEventCallback(
     _ streamRef: ConstFSEventStreamRef,
     _ clientCallBackInfo: UnsafeMutableRawPointer?,
@@ -95,13 +98,16 @@ private func fsEventCallback(
     _ eventFlags: UnsafePointer<FSEventStreamEventFlags>,
     _ eventIds: UnsafePointer<FSEventStreamEventId>
 ) {
-    guard let info = clientCallBackInfo else { return }
+    guard let info = clientCallBackInfo, numEvents > 0 else { return }
     let monitor = Unmanaged<FSEventsMonitor>.fromOpaque(info).takeUnretainedValue()
 
-    let pathsPointer = eventPaths.assumingMemoryBound(to: UnsafeMutableRawPointer?.self)
-    guard let pathsArrayPointer = pathsPointer.pointee else { return }
-    let paths = Unmanaged<CFArray>.fromOpaque(pathsArrayPointer).takeUnretainedValue() as! [String]
-    let maxEventId = (0..<numEvents).map { eventIds[$0] }.max() ?? 0
+    let cfPaths = Unmanaged<CFArray>.fromOpaque(eventPaths).takeUnretainedValue()
+    guard let paths = cfPaths as? [String], !paths.isEmpty else { return }
+
+    var maxEventId: FSEventStreamEventId = 0
+    for i in 0..<numEvents {
+        if eventIds[i] > maxEventId { maxEventId = eventIds[i] }
+    }
 
     monitor.handleEvents(paths: paths, eventId: maxEventId)
 }

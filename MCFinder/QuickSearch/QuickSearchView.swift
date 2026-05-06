@@ -141,7 +141,7 @@ struct QuickSearchView: View {
         }
 
         do {
-            let result = try searchEngine.search(text: query, mode: .fts5, limit: 8)
+            let result = try searchEngine.search(text: query, mode: .contains, limit: 8)
             state.results = result.items
             state.selectedIndex = 0
         } catch {

@@ -31,13 +31,16 @@ extension NSEvent.ModifierFlags {
         return parts.joined()
     }
 
-    init(rawValue: UInt) {
-        self = []
-        if rawValue & UInt(cmdKey) != 0 { insert(.command) }
-        if rawValue & UInt(shiftKey) != 0 { insert(.shift) }
-        if rawValue & UInt(optionKey) != 0 { insert(.option) }
-        if rawValue & UInt(controlKey) != 0 { insert(.control) }
-    }
+    // NOTE: We deliberately do NOT define a custom `init(rawValue: UInt)`
+    // here. The OptionSet protocol already provides one whose semantics
+    // match `modifiers.rawValue` (NSEvent flag bits like 1<<20 for ⌘).
+    //
+    // A previous custom init in this file shadowed the synthesized one
+    // and tried to interpret the saved rawValue using Carbon constants
+    // (cmdKey == 1<<8). When users persisted a hotkey and relaunched,
+    // every modifier bit ANDed to 0 → the app then registered the bare
+    // key (e.g. Space, keyCode 49) as a global hotkey, hijacking the
+    // Space bar system-wide. Do not re-add that init.
 }
 
 extension Int {

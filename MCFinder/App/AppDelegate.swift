@@ -48,8 +48,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
+    }
 
-        guard let appState, appState.setupCompleted == false else { return }
+    func performSetupIfNeeded() {
+        guard let appState, !appState.setupCompleted else { return }
 
         appState.setup(
             databaseManager: databaseManager,
@@ -69,8 +71,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let window = NSApp.windows.first {
             window.delegate = self
         }
-
-        // Logger.app.info("MCFinder launched")
     }
 
     func applicationWillTerminate(_ notification: Notification) {

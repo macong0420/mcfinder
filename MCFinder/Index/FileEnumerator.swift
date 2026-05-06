@@ -19,8 +19,6 @@ struct FileEnumerator {
                 return
             }
 
-            enumerator.skipDescendants()
-
             let task = Task.detached {
                 for case let fileURL as URL in enumerator {
                     if Task.isCancelled { break }

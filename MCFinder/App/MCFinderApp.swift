@@ -24,6 +24,11 @@ struct MCFinderApp: App {
                 }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
                 Divider()
+                Button("Settings...") {
+                    appState.openSettings()
+                }
+                .keyboardShortcut(",", modifiers: [.command])
+                Divider()
                 Button("Rescan All") {
                     let urls = appState.scanPaths.map { URL(fileURLWithPath: $0) }
                     appState.startScan(paths: urls)
@@ -39,7 +44,6 @@ struct MCFinderApp: App {
                         appState.toggleQuickLook(for: item)
                     }
                 }
-                .keyboardShortcut(.space)
             }
             CommandGroup(replacing: .help) {
                 Button("MCFinder Help") {

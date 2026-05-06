@@ -27,10 +27,9 @@
 		018 /* QuickLookCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118; };
 		019 /* BookmarkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119; };
 		022 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122; };
-		023 /* SearchBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 123; };
-		024 /* ResultsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 124; };
+
 		025 /* ResultRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125; };
-		026 /* FilterBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 126; };
+
 		027 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 127; };
 		028 /* HotkeySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128; };
 		029 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 129; };
@@ -61,10 +60,9 @@
 		118 /* QuickLookCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookCoordinator.swift; sourceTree = "<group>"; };
 		119 /* BookmarkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkManager.swift; sourceTree = "<group>"; };
 		122 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		123 /* SearchBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBarView.swift; sourceTree = "<group>"; };
-		124 /* ResultsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsListView.swift; sourceTree = "<group>"; };
+
 		125 /* ResultRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultRowView.swift; sourceTree = "<group>"; };
-		126 /* FilterBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterBarView.swift; sourceTree = "<group>"; };
+
 		127 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		128 /* HotkeySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeySettingsView.swift; sourceTree = "<group>"; };
 		129 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
@@ -176,7 +174,7 @@
 		};
 		421 /* Views */ = {
 			isa = PBXGroup;
-			children = (122, 123, 124, 125, 126, 127, 128, 129);
+			children = (122, 125, 127, 128, 129);
 			path = Views;
 			sourceTree = "<group>";
 		};
