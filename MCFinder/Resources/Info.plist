@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>MCFinder</string>
+	<key>CFBundleExecutable</key>
+	<string>MCFinder</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.mcfinder.app</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>zh-Hans</string>
+	</array>
+	<key>CFBundleName</key>
+	<string>MCFinder</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleSupportedPlatforms</key>
+	<array>
+		<string>MacOSX</string>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>MCFinder needs access to your Desktop folder to index and search files.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>MCFinder needs access to your Documents folder to index and search files.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>MCFinder needs access to your Downloads folder to index and search files.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>MCFinder needs access to your Apple Music library to index and search your music files.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright (c) 2026 MCFinder. All rights reserved.</string>
+</dict>
+</plist>

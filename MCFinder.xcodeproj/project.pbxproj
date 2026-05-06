@@ -1,0 +1,367 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		001 /* MCFinderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101; };
+		002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 102; };
+		003 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 103; };
+		004 /* DatabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 104; };
+		005 /* SchemaVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 105; };
+		006 /* DatabaseModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 106; };
+		007 /* SearchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107; };
+		008 /* SearchModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108; };
+		009 /* IndexManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109; };
+		010 /* FileEnumerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110; };
+		011 /* FSEventsMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111; };
+		012 /* FSEventsDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112; };
+		013 /* KeyboardShortcutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113; };
+		014 /* RecorderNSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114; };
+		015 /* QuickSearchPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 115; };
+		016 /* QuickSearchState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116; };
+		017 /* QuickSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117; };
+		018 /* QuickLookCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118; };
+		019 /* BookmarkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119; };
+		022 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122; };
+		023 /* SearchBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 123; };
+		024 /* ResultsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 124; };
+		025 /* ResultRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125; };
+		026 /* FilterBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 126; };
+		027 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 127; };
+		028 /* HotkeySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 128; };
+		029 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 129; };
+		031 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 131; };
+		032 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132; };
+		033 /* FileTypeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 133; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		100 /* MCFinder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MCFinder.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		101 /* MCFinderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCFinderApp.swift; sourceTree = "<group>"; };
+		102 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		103 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		104 /* DatabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseManager.swift; sourceTree = "<group>"; };
+		105 /* SchemaVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaVersion.swift; sourceTree = "<group>"; };
+		106 /* DatabaseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseModels.swift; sourceTree = "<group>"; };
+		107 /* SearchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchEngine.swift; sourceTree = "<group>"; };
+		108 /* SearchModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchModels.swift; sourceTree = "<group>"; };
+		109 /* IndexManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexManager.swift; sourceTree = "<group>"; };
+		110 /* FileEnumerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileEnumerator.swift; sourceTree = "<group>"; };
+		111 /* FSEventsMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FSEventsMonitor.swift; sourceTree = "<group>"; };
+		112 /* FSEventsDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FSEventsDelegate.swift; sourceTree = "<group>"; };
+		113 /* KeyboardShortcutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcutManager.swift; sourceTree = "<group>"; };
+		114 /* RecorderNSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecorderNSView.swift; sourceTree = "<group>"; };
+		115 /* QuickSearchPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSearchPanel.swift; sourceTree = "<group>"; };
+		116 /* QuickSearchState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSearchState.swift; sourceTree = "<group>"; };
+		117 /* QuickSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSearchView.swift; sourceTree = "<group>"; };
+		118 /* QuickLookCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLookCoordinator.swift; sourceTree = "<group>"; };
+		119 /* BookmarkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkManager.swift; sourceTree = "<group>"; };
+		122 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		123 /* SearchBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBarView.swift; sourceTree = "<group>"; };
+		124 /* ResultsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsListView.swift; sourceTree = "<group>"; };
+		125 /* ResultRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultRowView.swift; sourceTree = "<group>"; };
+		126 /* FilterBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterBarView.swift; sourceTree = "<group>"; };
+		127 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		128 /* HotkeySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeySettingsView.swift; sourceTree = "<group>"; };
+		129 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
+		131 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
+		132 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		133 /* FileTypeDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTypeDetector.swift; sourceTree = "<group>"; };
+		200 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		201 /* MCFinder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MCFinder.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		300 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		400 = {
+			isa = PBXGroup;
+			children = (
+				401 /* MCFinder */,
+				402 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		401 /* MCFinder */ = {
+			isa = PBXGroup;
+			children = (
+				411 /* App */,
+				412 /* Database */,
+				413 /* Search */,
+				414 /* Index */,
+				415 /* Monitoring */,
+				416 /* Hotkeys */,
+				417 /* QuickSearch */,
+				418 /* Preview */,
+				419 /* Bookmarks */,
+				421 /* Views */,
+				422 /* Utilities */,
+				423 /* Resources */,
+				201 /* MCFinder.entitlements */,
+			);
+			path = MCFinder;
+			sourceTree = "<group>";
+		};
+		402 /* Products */ = {
+			isa = PBXGroup;
+			children = (100);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		411 /* App */ = {
+			isa = PBXGroup;
+			children = (101, 102, 103);
+			path = App;
+			sourceTree = "<group>";
+		};
+		412 /* Database */ = {
+			isa = PBXGroup;
+			children = (104, 105, 106);
+			path = Database;
+			sourceTree = "<group>";
+		};
+		413 /* Search */ = {
+			isa = PBXGroup;
+			children = (107, 108);
+			path = Search;
+			sourceTree = "<group>";
+		};
+		414 /* Index */ = {
+			isa = PBXGroup;
+			children = (109, 110);
+			path = Index;
+			sourceTree = "<group>";
+		};
+		415 /* Monitoring */ = {
+			isa = PBXGroup;
+			children = (111, 112);
+			path = Monitoring;
+			sourceTree = "<group>";
+		};
+		416 /* Hotkeys */ = {
+			isa = PBXGroup;
+			children = (113, 114);
+			path = Hotkeys;
+			sourceTree = "<group>";
+		};
+		417 /* QuickSearch */ = {
+			isa = PBXGroup;
+			children = (115, 116, 117);
+			path = QuickSearch;
+			sourceTree = "<group>";
+		};
+		418 /* Preview */ = {
+			isa = PBXGroup;
+			children = (118);
+			path = Preview;
+			sourceTree = "<group>";
+		};
+		419 /* Bookmarks */ = {
+			isa = PBXGroup;
+			children = (119);
+			path = Bookmarks;
+			sourceTree = "<group>";
+		};
+		421 /* Views */ = {
+			isa = PBXGroup;
+			children = (122, 123, 124, 125, 126, 127, 128, 129);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		422 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (131, 132, 133);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		423 /* Resources */ = {
+			isa = PBXGroup;
+			children = (200);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		500 /* MCFinder */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 700;
+			buildPhases = (
+				501 /* Sources */,
+				300 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MCFinder;
+			productName = MCFinder;
+			productReference = 100;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		600 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1530;
+				LastUpgradeCheck = 1530;
+			};
+			buildConfigurationList = 701;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, "zh-Hans", Base);
+			mainGroup = 400;
+			productRefGroup = 402;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (500);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		501 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				001, 002, 003, 004, 005, 006, 007, 008, 009, 010,
+				011, 012, 013, 014, 015, 016, 017, 018, 019,
+				022, 023, 024, 025, 026, 027, 028, 029,
+				031, 032, 033,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		800 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = ("DEBUG=1", "$(inherited)");
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		801 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_OPTIMIZATION_LEVEL = s;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		802 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = MCFinder/MCFinder.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MCFinder/Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MCFinder;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright (c) 2026 MCFinder. All rights reserved.";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mcfinder.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		803 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = MCFinder/MCFinder.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MCFinder/Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MCFinder;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright (c) 2026 MCFinder. All rights reserved.";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mcfinder.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		700 /* Build configuration list for PBXNativeTarget "MCFinder" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (802, 803);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		701 /* Build configuration list for PBXProject "MCFinder" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (800, 801);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = 600 /* Project object */;
+}
