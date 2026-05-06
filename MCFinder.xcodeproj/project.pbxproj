@@ -36,6 +36,7 @@
 		031 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 131; };
 		032 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 132; };
 		033 /* FileTypeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 133; };
+		034 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 134; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -69,6 +70,7 @@
 		131 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 		132 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		133 /* FileTypeDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTypeDetector.swift; sourceTree = "<group>"; };
+		134 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		200 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		201 /* MCFinder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MCFinder.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -82,6 +84,17 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+		502 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				034,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXGroup section */
 		400 = {
@@ -186,7 +199,7 @@
 		};
 		423 /* Resources */ = {
 			isa = PBXGroup;
-			children = (200);
+			children = (134, 200);
 			path = Resources;
 			sourceTree = "<group>";
 		};
@@ -199,6 +212,7 @@
 			buildPhases = (
 				501 /* Sources */,
 				300 /* Frameworks */,
+				502 /* Resources */,
 			);
 			buildRules = (
 			);
